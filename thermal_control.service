@@ -1,0 +1,15 @@
+[Unit]
+Description=This service control the system cooling fan's speed
+After=network.target
+StartLimitBurst=5
+StartLimitIntervalSec=10
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=root
+ExecStart=python /usr/local/bin/auto_fan_speed.py
+
+[Install]
+WantedBy=multi-user.target
