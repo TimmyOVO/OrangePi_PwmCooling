@@ -7,14 +7,20 @@ n = 0
 period = 20000000
 duty_cycle = 5000000
 
-fan_speed_array = [(0, 0), (35, 20), (45, 30), (75, 85), (85, 100)]
+fan_speed_array = [(0, 0), (35, 20), (45, 30), (70, 85), (85, 100)]
+
+
+def execute_command(command):
+    subprocess.run(command, shell=True, check=True, capture_output=True)
 
 
 def get_pwmchip_path():
-    return f"/sys/class/pwm/pwmchip{str(n)}"
+    return f"/sys/class/pwm/pwmchip{n}"
 
 
 def is_pwmchip_enabled():
+    if not os.path.exists(f"{get_pwmchip_path()}/pwm0"):
+        return False
     enable_flag_path = f"{get_pwmchip_path()}/pwm0/enable"
     return bool(open(enable_flag_path, "r").readline(1))
 
@@ -24,23 +30,24 @@ def get_system_core_temperature():
 
 
 def enable_pwm_layout():
-    subprocess.run(f"echo 0 > {get_pwmchip_path()}/export", shell=True)
+    execute_command(f"echo 0 > {get_pwmchip_path()}/export")
 
 
 def set_pwm_enabled(enabled):
-    subprocess.run(f"echo {enabled} > {get_pwmchip_path()}/pwm0/enable", shell=True)
+    execute_command(f"echo {enabled} > {get_pwmchip_path()}/pwm0/enable")
 
 
 def change_duty_cycle(new_percentage):
     print(f"修改风扇风速到{new_percentage}%")
-    subprocess.run(f"echo {period} > {get_pwmchip_path()}/pwm0/period", shell=True)
-    subprocess.run(
-        f"echo {int(period*(0.01*(100.0-new_percentage)))} > {get_pwmchip_path()}/pwm0/duty_cycle",
-        shell=True,
+    execute_command(f"echo {period} > {get_pwmchip_path()}/pwm0/period")
+    execute_command(
+        f"echo {int(period*(0.01*(100.0-new_percentage)))} > {get_pwmchip_path()}/pwm0/duty_cycle"
     )
 
 
 def main():
+    print("正在启用温度控制中...")
+
     if not is_pwmchip_enabled():
         enable_pwm_layout()
     while True:
@@ -52,8 +59,8 @@ def main():
                 last_fan_percentage = fan_percentage
         print(f"当前核心温度：{current_temp}° , 调整转速为: {last_fan_percentage}%")
         change_duty_cycle(last_fan_percentage)
+        set_pwm_enabled(1)
         time.sleep(3)
-    set_pwm_enabled(1)
 
 
 if __name__ == "__main__":
